@@ -5,7 +5,7 @@
   "main": "index.js",
   "type": "module",
   "bin": {
-    "devin-api-mcp": "./index.js"
+    "devin-api-mcp": "index.js"
   },
   "scripts": {
     "start": "node index.js"
