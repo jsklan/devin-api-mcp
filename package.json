@@ -13,5 +13,9 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.1"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsklan/devin-api-mcp.git"
+  },
   "license": "MIT"
 }
