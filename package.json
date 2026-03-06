@@ -1,0 +1,17 @@
+{
+  "name": "devin-api-mcp",
+  "version": "0.1.0",
+  "description": "MCP server for the Devin API — create, manage, and interact with Devin sessions",
+  "main": "index.js",
+  "type": "module",
+  "bin": {
+    "devin-api-mcp": "./index.js"
+  },
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1"
+  },
+  "license": "MIT"
+}
