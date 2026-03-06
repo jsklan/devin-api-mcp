@@ -21,23 +21,24 @@ The existing [Devin MCP](https://docs.devin.ai/work-with-devin/devin-mcp) server
 
 Generate a Devin API key from your [Devin account settings](https://app.devin.ai/settings).
 
-### 2. Install
+### 2. Register with Claude Code (one-liner)
 
 ```bash
-git clone https://github.com/YOUR_ORG/devin-api-mcp.git
-cd devin-api-mcp
-npm install
-```
-
-### 3. Register with Claude Code
-
-```bash
-claude mcp add -s user -e DEVIN_API_KEY=your_key_here devin-api node /absolute/path/to/devin-api-mcp/index.js
+claude mcp add -s user -e DEVIN_API_KEY=your_key_here devin-api npx @jsklan/devin-api-mcp
 ```
 
 Or if `DEVIN_API_KEY` is already in your environment:
 
 ```bash
+claude mcp add -s user devin-api npx @jsklan/devin-api-mcp
+```
+
+### Alternative: Install from source
+
+```bash
+git clone https://github.com/jsklan/devin-api-mcp.git
+cd devin-api-mcp
+npm install
 claude mcp add -s user devin-api node /absolute/path/to/devin-api-mcp/index.js
 ```
 
