@@ -3,6 +3,8 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
+import { readFile } from "node:fs/promises";
+import { basename } from "node:path";
 
 const API_BASE = "https://api.devin.ai";
 
@@ -49,6 +51,27 @@ async function devinFetch(path, options = {}) {
   return res.json();
 }
 
+async function devinFetchFormData(path, formData) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${getApiKey()}` },
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Devin API POST ${path} returned ${res.status}: ${text}`);
+  }
+
+  // The attachments endpoint may return a plain string URL or JSON
+  const text = await res.text();
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
+}
+
 function formatSession(s) {
   const parts = [
     `Session: ${s.session_id}`,
@@ -65,9 +88,13 @@ function formatSession(s) {
 
 const server = new McpServer({
   name: "devin-api",
-  version: "0.1.0",
+  version: "0.2.0",
   instructions:
-    "Use this server for managing Devin sessions (create, list, message, terminate) and playbooks via the Devin REST API. " +
+    "Use this server for managing Devin sessions (create, list, message, terminate, tag), " +
+    "knowledge (list, create, update, delete), " +
+    "playbooks (list, get, create, update, delete), " +
+    "secrets (list, create, delete), " +
+    "and attachments (upload) via the Devin REST API. " +
     "Do NOT use this server for documentation queries or asking questions about repositories — those use the separate DeepWiki 'devin' MCP server.",
 });
 
@@ -89,6 +116,14 @@ server.tool(
       .positive()
       .optional()
       .describe("Optional max ACU (compute) limit"),
+    idempotent: z.boolean().optional().describe("If true, reuse an existing session with the same prompt instead of creating a new one"),
+    knowledge_ids: z.array(z.string()).optional().describe("List of knowledge IDs to use. If omitted, uses all knowledge. Pass empty array to use none"),
+    secret_ids: z.array(z.string()).optional().describe("List of secret IDs to use. If omitted, uses all secrets. Pass empty array to use none"),
+    session_secrets: z.array(z.object({
+      key: z.string().describe("Secret key name"),
+      value: z.string().describe("Secret value"),
+    })).optional().describe("Temporary session-specific secrets (not persisted to org)"),
+    structured_output_schema: z.record(z.unknown()).optional().describe("JSON Schema (Draft 7) for structured output validation. Max 64KB"),
   },
   async (params) => {
     const body = { prompt: params.prompt };
@@ -98,6 +133,11 @@ server.tool(
     if (params.tags) body.tags = params.tags;
     if (params.unlisted) body.unlisted = params.unlisted;
     if (params.max_acu_limit) body.max_acu_limit = params.max_acu_limit;
+    if (params.idempotent !== undefined) body.idempotent = params.idempotent;
+    if (params.knowledge_ids) body.knowledge_ids = params.knowledge_ids;
+    if (params.secret_ids) body.secret_ids = params.secret_ids;
+    if (params.session_secrets) body.session_secrets = params.session_secrets;
+    if (params.structured_output_schema) body.structured_output_schema = params.structured_output_schema;
 
     const result = await devinFetch("/v1/sessions", { method: "POST", body });
     return {
@@ -228,6 +268,126 @@ server.tool(
   }
 );
 
+server.tool(
+  "update_session_tags",
+  "Update the tags on a Devin session via the REST API. Replaces all existing tags.",
+  {
+    session_id: z.string().describe("The session ID"),
+    tags: z.array(z.string()).max(50).describe("New tags for the session (replaces existing tags, max 50)"),
+  },
+  async ({ session_id, tags }) => {
+    const result = await devinFetch(`/v1/sessions/${session_id}/tags`, {
+      method: "PUT",
+      body: { tags },
+    });
+    return {
+      content: [{ type: "text", text: result?.detail || `Tags updated on session ${session_id}.` }],
+    };
+  }
+);
+
+// --- Knowledge tools ---
+
+server.tool(
+  "list_knowledge",
+  "List all knowledge entries and folders in the organization via the REST API.",
+  {},
+  async () => {
+    const data = await devinFetch("/v1/knowledge");
+    const parts = [];
+
+    if (data.folders?.length) {
+      parts.push("--- Folders ---");
+      for (const f of data.folders) {
+        parts.push(`${f.name} (${f.id}): ${f.description || "(no description)"}`);
+      }
+    }
+
+    if (data.knowledge?.length) {
+      parts.push("--- Knowledge ---");
+      for (const k of data.knowledge) {
+        parts.push([
+          `${k.name} (${k.id})`,
+          `  Trigger: ${k.trigger_description}`,
+          k.pinned_repo ? `  Repo: ${k.pinned_repo}` : "",
+          k.parent_folder_id ? `  Folder: ${k.parent_folder_id}` : "",
+        ].filter(Boolean).join("\n"));
+      }
+    }
+
+    if (!parts.length) {
+      return { content: [{ type: "text", text: "No knowledge entries found." }] };
+    }
+
+    return { content: [{ type: "text", text: parts.join("\n\n") }] };
+  }
+);
+
+server.tool(
+  "create_knowledge",
+  "Create a new knowledge entry in the organization via the REST API. Knowledge entries teach Devin domain-specific information.",
+  {
+    name: z.string().describe("Name for the knowledge entry"),
+    body: z.string().describe("The knowledge content (markdown supported)"),
+    trigger_description: z.string().describe("Description of when Devin should use this knowledge"),
+    macro: z.string().optional().describe("Optional macro identifier"),
+    parent_folder_id: z.string().optional().describe("Optional folder ID to organize this entry under"),
+    pinned_repo: z.string().optional().describe("Optional repository to associate with this knowledge"),
+  },
+  async (params) => {
+    const result = await devinFetch("/v1/knowledge", {
+      method: "POST",
+      body: params,
+    });
+    return {
+      content: [{
+        type: "text",
+        text: `Knowledge created: ${result.name} (${result.id})`,
+      }],
+    };
+  }
+);
+
+server.tool(
+  "update_knowledge",
+  "Update an existing knowledge entry via the REST API.",
+  {
+    note_id: z.string().describe("The knowledge entry ID to update"),
+    name: z.string().describe("Updated name"),
+    body: z.string().describe("Updated content"),
+    trigger_description: z.string().describe("Updated trigger description"),
+    macro: z.string().nullable().optional().describe("Updated macro (null to clear)"),
+    parent_folder_id: z.string().nullable().optional().describe("Updated folder ID (null to clear)"),
+    pinned_repo: z.string().nullable().optional().describe("Updated pinned repo (null to clear)"),
+  },
+  async ({ note_id, ...fields }) => {
+    const result = await devinFetch(`/v1/knowledge/${note_id}`, {
+      method: "PUT",
+      body: fields,
+    });
+    return {
+      content: [{
+        type: "text",
+        text: `Knowledge updated: ${result.name} (${result.id})`,
+      }],
+    };
+  }
+);
+
+server.tool(
+  "delete_knowledge",
+  "Delete a knowledge entry from the organization via the REST API. This is permanent.",
+  {
+    note_id: z.string().describe("The knowledge entry ID to delete"),
+  },
+  async ({ note_id }) => {
+    await devinFetch(`/v1/knowledge/${note_id}`, { method: "DELETE" });
+    return {
+      content: [{ type: "text", text: `Knowledge entry ${note_id} deleted.` }],
+    };
+  }
+);
+
 // --- Playbook tools ---
 
 server.tool(
@@ -260,6 +420,159 @@ server.tool(
       `\n${playbook.body}`,
     ].join("\n");
     return { content: [{ type: "text", text }] };
+  }
+);
+
+server.tool(
+  "create_playbook",
+  "Create a new team playbook via the REST API.",
+  {
+    title: z.string().min(1).describe("Playbook title"),
+    body: z.string().min(1).describe("Playbook content/instructions"),
+    macro: z.string().optional().describe("Optional macro identifier"),
+  },
+  async (params) => {
+    const result = await devinFetch("/v1/playbooks", {
+      method: "POST",
+      body: params,
+    });
+    return {
+      content: [{
+        type: "text",
+        text: `Playbook created: ${result.title} (${result.playbook_id})`,
+      }],
+    };
+  }
+);
+
+server.tool(
+  "update_playbook",
+  "Update an existing team playbook via the REST API.",
+  {
+    playbook_id: z.string().describe("The playbook ID to update"),
+    title: z.string().min(1).describe("Updated title"),
+    body: z.string().min(1).describe("Updated content/instructions"),
+    macro: z.string().nullable().optional().describe("Updated macro (null to clear)"),
+  },
+  async ({ playbook_id, ...fields }) => {
+    const result = await devinFetch(`/v1/playbooks/${playbook_id}`, {
+      method: "PUT",
+      body: fields,
+    });
+    return {
+      content: [{
+        type: "text",
+        text: result?.status || `Playbook ${playbook_id} updated.`,
+      }],
+    };
+  }
+);
+
+server.tool(
+  "delete_playbook",
+  "Delete a team playbook via the REST API. Requires ManageOrgPlaybooks permission.",
+  {
+    playbook_id: z.string().describe("The playbook ID to delete"),
+  },
+  async ({ playbook_id }) => {
+    const result = await devinFetch(`/v1/playbooks/${playbook_id}`, { method: "DELETE" });
+    return {
+      content: [{
+        type: "text",
+        text: result?.status || `Playbook ${playbook_id} deleted.`,
+      }],
+    };
+  }
+);
+
+// --- Secrets tools ---
+
+server.tool(
+  "list_secrets",
+  "List metadata for all secrets in the organization via the REST API. Secret values are never returned.",
+  {},
+  async () => {
+    const data = await devinFetch("/v1/secrets");
+    const secrets = Array.isArray(data) ? data : data.secrets || [];
+    if (!secrets.length) {
+      return { content: [{ type: "text", text: "No secrets found." }] };
+    }
+    const text = secrets
+      .map((s) => `${s.key || "(unnamed)"} (${s.id}) — type: ${s.type}${s.created_at ? `, created: ${s.created_at}` : ""}`)
+      .join("\n");
+    return { content: [{ type: "text", text }] };
+  }
+);
+
+server.tool(
+  "create_secret",
+  "Create a new secret in the organization via the REST API. The secret value is encrypted at rest.",
+  {
+    type: z.enum(["cookie", "key-value", "totp"]).describe("Secret type"),
+    key: z.string().describe("Secret name (must be unique in org)"),
+    value: z.string().describe("Secret value (will be encrypted)"),
+    sensitive: z.boolean().describe("If true, value is redacted in logs"),
+    note: z.string().optional().describe("Optional description of the secret's purpose"),
+  },
+  async (params) => {
+    const result = await devinFetch("/v1/secrets", {
+      method: "POST",
+      body: params,
+    });
+    return {
+      content: [{
+        type: "text",
+        text: `Secret created with ID: ${result.id}`,
+      }],
+    };
+  }
+);
+
+server.tool(
+  "delete_secret",
+  "Permanently delete a secret from the organization via the REST API. This cannot be undone.",
+  {
+    secret_id: z.string().describe("The secret ID to delete"),
+  },
+  async ({ secret_id }) => {
+    const result = await devinFetch(`/v1/secrets/${secret_id}`, { method: "DELETE" });
+    return {
+      content: [{
+        type: "text",
+        text: result?.message || `Secret ${secret_id} deleted.`,
+      }],
+    };
+  }
+);
+
+// --- Attachment tools ---
+
+server.tool(
+  "upload_attachment",
+  "Upload a file attachment for use in Devin sessions via the REST API. Returns a URL to reference in session prompts using ATTACHMENT:\"<url>\" format.",
+  {
+    file_path: z.string().describe("Absolute path to the file to upload"),
+  },
+  async ({ file_path }) => {
+    const fileBuffer = await readFile(file_path);
+    const fileName = basename(file_path);
+    const blob = new Blob([fileBuffer]);
+    const formData = new FormData();
+    formData.append("file", blob, fileName);
+
+    const url = await devinFetchFormData("/v1/attachments", formData);
+    return {
+      content: [{
+        type: "text",
+        text: [
+          `File uploaded: ${fileName}`,
+          `URL: ${url}`,
+          ``,
+          `To use in a session prompt, add this on its own line:`,
+          `ATTACHMENT:"${url}"`,
+        ].join("\n"),
+      }],
+    };
   }
 );
 
