@@ -259,6 +259,108 @@ server.tool(
   }
 );
 
+// --- Knowledge tools ---
+
+server.tool(
+  "list_knowledge",
+  "List all knowledge entries and folders in the organization via the REST API.",
+  {},
+  async () => {
+    const data = await devinFetch("/v1/knowledge");
+    const parts = [];
+
+    if (data.folders?.length) {
+      parts.push("--- Folders ---");
+      for (const f of data.folders) {
+        parts.push(`${f.name} (${f.id}): ${f.description || "(no description)"}`);
+      }
+    }
+
+    if (data.knowledge?.length) {
+      parts.push("--- Knowledge ---");
+      for (const k of data.knowledge) {
+        parts.push([
+          `${k.name} (${k.id})`,
+          `  Trigger: ${k.trigger_description}`,
+          k.pinned_repo ? `  Repo: ${k.pinned_repo}` : "",
+          k.parent_folder_id ? `  Folder: ${k.parent_folder_id}` : "",
+        ].filter(Boolean).join("\n"));
+      }
+    }
+
+    if (!parts.length) {
+      return { content: [{ type: "text", text: "No knowledge entries found." }] };
+    }
+
+    return { content: [{ type: "text", text: parts.join("\n\n") }] };
+  }
+);
+
+server.tool(
+  "create_knowledge",
+  "Create a new knowledge entry in the organization via the REST API. Knowledge entries teach Devin domain-specific information.",
+  {
+    name: z.string().describe("Name for the knowledge entry"),
+    body: z.string().describe("The knowledge content (markdown supported)"),
+    trigger_description: z.string().describe("Description of when Devin should use this knowledge"),
+    macro: z.string().optional().describe("Optional macro identifier"),
+    parent_folder_id: z.string().optional().describe("Optional folder ID to organize this entry under"),
+    pinned_repo: z.string().optional().describe("Optional repository to associate with this knowledge"),
+  },
+  async (params) => {
+    const result = await devinFetch("/v1/knowledge", {
+      method: "POST",
+      body: params,
+    });
+    return {
+      content: [{
+        type: "text",
+        text: `Knowledge created: ${result.name} (${result.id})`,
+      }],
+    };
+  }
+);
+
+server.tool(
+  "update_knowledge",
+  "Update an existing knowledge entry via the REST API.",
+  {
+    note_id: z.string().describe("The knowledge entry ID to update"),
+    name: z.string().describe("Updated name"),
+    body: z.string().describe("Updated content"),
+    trigger_description: z.string().describe("Updated trigger description"),
+    macro: z.string().nullable().optional().describe("Updated macro (null to clear)"),
+    parent_folder_id: z.string().nullable().optional().describe("Updated folder ID (null to clear)"),
+    pinned_repo: z.string().nullable().optional().describe("Updated pinned repo (null to clear)"),
+  },
+  async ({ note_id, ...fields }) => {
+    const result = await devinFetch(`/v1/knowledge/${note_id}`, {
+      method: "PUT",
+      body: fields,
+    });
+    return {
+      content: [{
+        type: "text",
+        text: `Knowledge updated: ${result.name} (${result.id})`,
+      }],
+    };
+  }
+);
+
+server.tool(
+  "delete_knowledge",
+  "Delete a knowledge entry from the organization via the REST API. This is permanent.",
+  {
+    note_id: z.string().describe("The knowledge entry ID to delete"),
+  },
+  async ({ note_id }) => {
+    await devinFetch(`/v1/knowledge/${note_id}`, { method: "DELETE" });
+    return {
+      content: [{ type: "text", text: `Knowledge entry ${note_id} deleted.` }],
+    };
+  }
+);
+
 // --- Playbook tools ---
 
 server.tool(
