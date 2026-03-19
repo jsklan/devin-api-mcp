@@ -3,6 +3,8 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
+import { readFile } from "node:fs/promises";
+import { basename } from "node:path";
 
 const API_BASE = "https://api.devin.ai";
 
@@ -47,6 +49,27 @@ async function devinFetch(path, options = {}) {
 
   if (res.status === 204) return null;
   return res.json();
+}
+
+async function devinFetchFormData(path, formData) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${getApiKey()}` },
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Devin API POST ${path} returned ${res.status}: ${text}`);
+  }
+
+  // The attachments endpoint may return a plain string URL or JSON
+  const text = await res.text();
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
 }
 
 function formatSession(s) {
@@ -513,6 +536,37 @@ server.tool(
       content: [{
         type: "text",
         text: result?.message || `Secret ${secret_id} deleted.`,
+      }],
+    };
+  }
+);
+
+// --- Attachment tools ---
+
+server.tool(
+  "upload_attachment",
+  "Upload a file attachment for use in Devin sessions via the REST API. Returns a URL to reference in session prompts using ATTACHMENT:\"<url>\" format.",
+  {
+    file_path: z.string().describe("Absolute path to the file to upload"),
+  },
+  async ({ file_path }) => {
+    const fileBuffer = await readFile(file_path);
+    const fileName = basename(file_path);
+    const blob = new Blob([fileBuffer]);
+    const formData = new FormData();
+    formData.append("file", blob, fileName);
+
+    const url = await devinFetchFormData("/v1/attachments", formData);
+    return {
+      content: [{
+        type: "text",
+        text: [
+          `File uploaded: ${fileName}`,
+          `URL: ${url}`,
+          ``,
+          `To use in a session prompt, add this on its own line:`,
+          `ATTACHMENT:"${url}"`,
+        ].join("\n"),
       }],
     };
   }
