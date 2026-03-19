@@ -9,10 +9,10 @@ import { basename } from "node:path";
 const API_BASE = "https://api.devin.ai";
 
 function getApiKey(): string {
-  const key = process.env.DEVIN_API_KEY;
+  const key = process.env.DEVIN_PERSONAL_API_KEY || process.env.DEVIN_API_KEY;
   if (!key) {
     throw new Error(
-      "DEVIN_API_KEY environment variable is required. " +
+      "DEVIN_PERSONAL_API_KEY environment variable is required. " +
         "Get your key from your Devin account settings."
     );
   }

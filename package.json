@@ -2,17 +2,19 @@
   "name": "@jsklan/devin-api-mcp",
   "version": "0.3.1",
   "description": "MCP server for the Devin API — create, manage, and interact with Devin sessions",
-  "main": "dist/index.js",
+  "main": "dist/v1.js",
   "type": "module",
   "bin": {
-    "devin-api-mcp": "dist/index.js"
+    "devin-api-v1": "dist/v1.js",
+    "devin-api-v3": "dist/v3.js"
   },
   "files": [
     "dist"
   ],
   "scripts": {
     "build": "tsc",
-    "start": "node dist/index.js",
+    "start:v1": "node dist/v1.js",
+    "start:v3": "node dist/v3.js",
     "prepublishOnly": "tsc",
     "version": "node -e \"const v=require('./package.json').version; for(const f of ['.claude-plugin/plugin.json','.claude-plugin/marketplace.json']){const j=require('./'+f);j.version?j.version=v:j.metadata&&(j.metadata.version=v);require('fs').writeFileSync(f,JSON.stringify(j,null,2)+'\\n')}\" && git add .claude-plugin/plugin.json .claude-plugin/marketplace.json"
   },

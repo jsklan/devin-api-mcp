@@ -1,7 +1,7 @@
 {
   "name": "devin-api",
-  "version": "0.3.1",
-  "description": "MCP server for the Devin API — create, manage, and interact with Devin sessions, knowledge, playbooks, secrets, and attachments",
+  "version": "0.4.0",
+  "description": "MCP servers for the Devin API — v1 (legacy) and v3 (organization) endpoints",
   "author": {
     "name": "jsklan"
   },
@@ -12,6 +12,8 @@
     "api",
     "sessions",
     "knowledge",
-    "playbooks"
+    "playbooks",
+    "secrets",
+    "schedules"
   ]
 }
