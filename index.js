@@ -241,6 +241,24 @@ server.tool(
   }
 );
 
+server.tool(
+  "update_session_tags",
+  "Update the tags on a Devin session via the REST API. Replaces all existing tags.",
+  {
+    session_id: z.string().describe("The session ID"),
+    tags: z.array(z.string()).max(50).describe("New tags for the session (replaces existing tags, max 50)"),
+  },
+  async ({ session_id, tags }) => {
+    const result = await devinFetch(`/v1/sessions/${session_id}/tags`, {
+      method: "PUT",
+      body: { tags },
+    });
+    return {
+      content: [{ type: "text", text: result?.detail || `Tags updated on session ${session_id}.` }],
+    };
+  }
+);
+
 // --- Playbook tools ---
 
 server.tool(
