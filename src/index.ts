@@ -8,7 +8,7 @@ import { basename } from "node:path";
 
 const API_BASE = "https://api.devin.ai";
 
-function getApiKey() {
+function getApiKey(): string {
   const key = process.env.DEVIN_API_KEY;
   if (!key) {
     throw new Error(
@@ -19,7 +19,13 @@ function getApiKey() {
   return key;
 }
 
-async function devinFetch(path, options = {}) {
+interface FetchOptions {
+  method?: string;
+  body?: Record<string, unknown>;
+  query?: Record<string, string | number | boolean | undefined | null>;
+}
+
+async function devinFetch(path: string, options: FetchOptions = {}): Promise<any> {
   const { method = "GET", body, query } = options;
   let url = `${API_BASE}${path}`;
   if (query) {
@@ -33,7 +39,7 @@ async function devinFetch(path, options = {}) {
     if (qs) url += `?${qs}`;
   }
 
-  const headers = { Authorization: `Bearer ${getApiKey()}` };
+  const headers: Record<string, string> = { Authorization: `Bearer ${getApiKey()}` };
   if (body) headers["Content-Type"] = "application/json";
 
   const res = await fetch(url, {
@@ -51,7 +57,7 @@ async function devinFetch(path, options = {}) {
   return res.json();
 }
 
-async function devinFetchFormData(path, formData) {
+async function devinFetchFormData(path: string, formData: FormData): Promise<any> {
   const res = await fetch(`${API_BASE}${path}`, {
     method: "POST",
     headers: { Authorization: `Bearer ${getApiKey()}` },
@@ -72,7 +78,19 @@ async function devinFetchFormData(path, formData) {
   }
 }
 
-function formatSession(s) {
+interface Session {
+  session_id: string;
+  status_enum?: string;
+  status?: string;
+  title?: string;
+  created_at: string;
+  requesting_user_email?: string;
+  pull_request?: { url?: string };
+  url?: string;
+  tags?: string[];
+}
+
+function formatSession(s: Session): string {
   const parts = [
     `Session: ${s.session_id}`,
     `Status: ${s.status_enum || s.status}`,
@@ -86,17 +104,21 @@ function formatSession(s) {
   return parts.join("\n");
 }
 
-const server = new McpServer({
-  name: "devin-api",
-  version: "0.2.0",
-  instructions:
-    "Use this server for managing Devin sessions (create, list, message, terminate, tag), " +
-    "knowledge (list, create, update, delete), " +
-    "playbooks (list, get, create, update, delete), " +
-    "secrets (list, create, delete), " +
-    "and attachments (upload) via the Devin REST API. " +
-    "Do NOT use this server for documentation queries or asking questions about repositories — those use the separate DeepWiki 'devin' MCP server.",
-});
+const server = new McpServer(
+  {
+    name: "devin-api",
+    version: "0.2.0",
+  },
+  {
+    instructions:
+      "Use this server for managing Devin sessions (create, list, message, terminate, tag), " +
+      "knowledge (list, create, update, delete), " +
+      "playbooks (list, get, create, update, delete), " +
+      "secrets (list, create, delete), " +
+      "and attachments (upload) via the Devin REST API. " +
+      "Do NOT use this server for documentation queries or asking questions about repositories — those use the separate DeepWiki 'devin' MCP server.",
+  }
+);
 
 // --- Session tools ---
 
@@ -123,10 +145,10 @@ server.tool(
       key: z.string().describe("Secret key name"),
       value: z.string().describe("Secret value"),
     })).optional().describe("Temporary session-specific secrets (not persisted to org)"),
-    structured_output_schema: z.record(z.unknown()).optional().describe("JSON Schema (Draft 7) for structured output validation. Max 64KB"),
+    structured_output_schema: z.record(z.string(), z.unknown()).optional().describe("JSON Schema (Draft 7) for structured output validation. Max 64KB"),
   },
   async (params) => {
-    const body = { prompt: params.prompt };
+    const body: Record<string, unknown> = { prompt: params.prompt };
     if (params.title) body.title = params.title;
     if (params.playbook_id) body.playbook_id = params.playbook_id;
     if (params.snapshot_id) body.snapshot_id = params.snapshot_id;
@@ -143,7 +165,7 @@ server.tool(
     return {
       content: [
         {
-          type: "text",
+          type: "text" as const,
           text: [
             `Session created successfully!`,
             `Session ID: ${result.session_id}`,
@@ -168,14 +190,14 @@ server.tool(
     user_email: z.string().optional().describe("Filter by requesting user email"),
   },
   async (params) => {
-    const query = { limit: params.limit || 20 };
-    if (params.offset) query.offset = params.offset;
+    const query: Record<string, string> = { limit: String(params.limit || 20) };
+    if (params.offset) query.offset = String(params.offset);
     if (params.user_email) query.user_email = params.user_email;
     // tags need to be passed as repeated query params
     let url = "/v1/sessions";
     const baseQuery = new URLSearchParams();
-    baseQuery.append("limit", String(query.limit));
-    if (query.offset) baseQuery.append("offset", String(query.offset));
+    baseQuery.append("limit", query.limit);
+    if (query.offset) baseQuery.append("offset", query.offset);
     if (query.user_email) baseQuery.append("user_email", query.user_email);
     if (params.tags) {
       for (const tag of params.tags) baseQuery.append("tags", tag);
@@ -191,14 +213,14 @@ server.tool(
       throw new Error(`Devin API GET ${url} returned ${res.status}: ${text}`);
     }
     const data = await res.json();
-    const sessions = data.sessions || data;
+    const sessions: Session[] = data.sessions || data;
 
     if (!sessions.length) {
-      return { content: [{ type: "text", text: "No sessions found." }] };
+      return { content: [{ type: "text" as const, text: "No sessions found." }] };
     }
 
     const text = sessions.map(formatSession).join("\n\n---\n\n");
-    return { content: [{ type: "text", text }] };
+    return { content: [{ type: "text" as const, text }] };
   }
 );
 
@@ -227,7 +249,7 @@ server.tool(
       }
     }
 
-    return { content: [{ type: "text", text: parts.join("\n") }] };
+    return { content: [{ type: "text" as const, text: parts.join("\n") }] };
   }
 );
 
@@ -244,7 +266,7 @@ server.tool(
       body: { message },
     });
     return {
-      content: [{ type: "text", text: `Message sent to session ${session_id}.` }],
+      content: [{ type: "text" as const, text: `Message sent to session ${session_id}.` }],
     };
   }
 );
@@ -260,7 +282,7 @@ server.tool(
     return {
       content: [
         {
-          type: "text",
+          type: "text" as const,
           text: result?.detail || `Session ${session_id} terminated.`,
         },
       ],
@@ -281,7 +303,7 @@ server.tool(
       body: { tags },
     });
     return {
-      content: [{ type: "text", text: result?.detail || `Tags updated on session ${session_id}.` }],
+      content: [{ type: "text" as const, text: result?.detail || `Tags updated on session ${session_id}.` }],
     };
   }
 );
@@ -294,7 +316,7 @@ server.tool(
   {},
   async () => {
     const data = await devinFetch("/v1/knowledge");
-    const parts = [];
+    const parts: string[] = [];
 
     if (data.folders?.length) {
       parts.push("--- Folders ---");
@@ -316,10 +338,10 @@ server.tool(
     }
 
     if (!parts.length) {
-      return { content: [{ type: "text", text: "No knowledge entries found." }] };
+      return { content: [{ type: "text" as const, text: "No knowledge entries found." }] };
     }
 
-    return { content: [{ type: "text", text: parts.join("\n\n") }] };
+    return { content: [{ type: "text" as const, text: parts.join("\n\n") }] };
   }
 );
 
@@ -337,11 +359,11 @@ server.tool(
   async (params) => {
     const result = await devinFetch("/v1/knowledge", {
       method: "POST",
-      body: params,
+      body: params as unknown as Record<string, unknown>,
     });
     return {
       content: [{
-        type: "text",
+        type: "text" as const,
         text: `Knowledge created: ${result.name} (${result.id})`,
       }],
     };
@@ -363,11 +385,11 @@ server.tool(
   async ({ note_id, ...fields }) => {
     const result = await devinFetch(`/v1/knowledge/${note_id}`, {
       method: "PUT",
-      body: fields,
+      body: fields as unknown as Record<string, unknown>,
     });
     return {
       content: [{
-        type: "text",
+        type: "text" as const,
         text: `Knowledge updated: ${result.name} (${result.id})`,
       }],
     };
@@ -383,7 +405,7 @@ server.tool(
   async ({ note_id }) => {
     await devinFetch(`/v1/knowledge/${note_id}`, { method: "DELETE" });
     return {
-      content: [{ type: "text", text: `Knowledge entry ${note_id} deleted.` }],
+      content: [{ type: "text" as const, text: `Knowledge entry ${note_id} deleted.` }],
     };
   }
 );
@@ -397,12 +419,12 @@ server.tool(
   async () => {
     const playbooks = await devinFetch("/v1/playbooks");
     if (!playbooks.length) {
-      return { content: [{ type: "text", text: "No playbooks found." }] };
+      return { content: [{ type: "text" as const, text: "No playbooks found." }] };
     }
     const text = playbooks
-      .map((p) => `${p.title} (${p.playbook_id})`)
+      .map((p: any) => `${p.title} (${p.playbook_id})`)
       .join("\n");
-    return { content: [{ type: "text", text }] };
+    return { content: [{ type: "text" as const, text }] };
   }
 );
 
@@ -419,7 +441,7 @@ server.tool(
       `ID: ${playbook.playbook_id}`,
       `\n${playbook.body}`,
     ].join("\n");
-    return { content: [{ type: "text", text }] };
+    return { content: [{ type: "text" as const, text }] };
   }
 );
 
@@ -434,11 +456,11 @@ server.tool(
   async (params) => {
     const result = await devinFetch("/v1/playbooks", {
       method: "POST",
-      body: params,
+      body: params as unknown as Record<string, unknown>,
     });
     return {
       content: [{
-        type: "text",
+        type: "text" as const,
         text: `Playbook created: ${result.title} (${result.playbook_id})`,
       }],
     };
@@ -457,11 +479,11 @@ server.tool(
   async ({ playbook_id, ...fields }) => {
     const result = await devinFetch(`/v1/playbooks/${playbook_id}`, {
       method: "PUT",
-      body: fields,
+      body: fields as unknown as Record<string, unknown>,
     });
     return {
       content: [{
-        type: "text",
+        type: "text" as const,
         text: result?.status || `Playbook ${playbook_id} updated.`,
       }],
     };
@@ -478,7 +500,7 @@ server.tool(
     const result = await devinFetch(`/v1/playbooks/${playbook_id}`, { method: "DELETE" });
     return {
       content: [{
-        type: "text",
+        type: "text" as const,
         text: result?.status || `Playbook ${playbook_id} deleted.`,
       }],
     };
@@ -495,12 +517,12 @@ server.tool(
     const data = await devinFetch("/v1/secrets");
     const secrets = Array.isArray(data) ? data : data.secrets || [];
     if (!secrets.length) {
-      return { content: [{ type: "text", text: "No secrets found." }] };
+      return { content: [{ type: "text" as const, text: "No secrets found." }] };
     }
     const text = secrets
-      .map((s) => `${s.key || "(unnamed)"} (${s.id}) — type: ${s.type}${s.created_at ? `, created: ${s.created_at}` : ""}`)
+      .map((s: any) => `${s.key || "(unnamed)"} (${s.id}) — type: ${s.type}${s.created_at ? `, created: ${s.created_at}` : ""}`)
       .join("\n");
-    return { content: [{ type: "text", text }] };
+    return { content: [{ type: "text" as const, text }] };
   }
 );
 
@@ -517,11 +539,11 @@ server.tool(
   async (params) => {
     const result = await devinFetch("/v1/secrets", {
       method: "POST",
-      body: params,
+      body: params as unknown as Record<string, unknown>,
     });
     return {
       content: [{
-        type: "text",
+        type: "text" as const,
         text: `Secret created with ID: ${result.id}`,
       }],
     };
@@ -538,7 +560,7 @@ server.tool(
     const result = await devinFetch(`/v1/secrets/${secret_id}`, { method: "DELETE" });
     return {
       content: [{
-        type: "text",
+        type: "text" as const,
         text: result?.message || `Secret ${secret_id} deleted.`,
       }],
     };
@@ -563,7 +585,7 @@ server.tool(
     const url = await devinFetchFormData("/v1/attachments", formData);
     return {
       content: [{
-        type: "text",
+        type: "text" as const,
         text: [
           `File uploaded: ${fileName}`,
           `URL: ${url}`,

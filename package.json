@@ -2,16 +2,18 @@
   "name": "@jsklan/devin-api-mcp",
   "version": "0.2.4",
   "description": "MCP server for the Devin API — create, manage, and interact with Devin sessions",
-  "main": "index.js",
+  "main": "dist/index.js",
   "type": "module",
   "bin": {
-    "devin-api-mcp": "index.js"
+    "devin-api-mcp": "dist/index.js"
   },
   "files": [
-    "index.js"
+    "dist"
   ],
   "scripts": {
-    "start": "node index.js"
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "prepublishOnly": "tsc"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.1",
@@ -21,5 +23,9 @@
     "type": "git",
     "url": "https://github.com/jsklan/devin-api-mcp.git"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "typescript": "^5.9.3"
+  }
 }
