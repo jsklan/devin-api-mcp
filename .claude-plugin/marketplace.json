@@ -1,0 +1,19 @@
+{
+  "name": "devin-api-mcp",
+  "owner": {
+    "name": "jsklan"
+  },
+  "metadata": {
+    "description": "MCP server for the Devin API — create, manage, and interact with Devin sessions, knowledge, playbooks, secrets, and attachments",
+    "version": "0.2.5"
+  },
+  "plugins": [
+    {
+      "name": "devin-api-mcp",
+      "source": "./",
+      "description": "Full Devin API coverage — manage sessions, knowledge, playbooks, secrets, and attachments from Claude Code",
+      "category": "integrations",
+      "tags": ["devin", "api", "sessions", "knowledge", "playbooks", "secrets"]
+    }
+  ]
+}
