@@ -458,6 +458,66 @@ server.tool(
   }
 );
 
+// --- Secrets tools ---
+
+server.tool(
+  "list_secrets",
+  "List metadata for all secrets in the organization via the REST API. Secret values are never returned.",
+  {},
+  async () => {
+    const data = await devinFetch("/v1/secrets");
+    const secrets = Array.isArray(data) ? data : data.secrets || [];
+    if (!secrets.length) {
+      return { content: [{ type: "text", text: "No secrets found." }] };
+    }
+    const text = secrets
+      .map((s) => `${s.key || "(unnamed)"} (${s.id}) — type: ${s.type}${s.created_at ? `, created: ${s.created_at}` : ""}`)
+      .join("\n");
+    return { content: [{ type: "text", text }] };
+  }
+);
+
+server.tool(
+  "create_secret",
+  "Create a new secret in the organization via the REST API. The secret value is encrypted at rest.",
+  {
+    type: z.enum(["cookie", "key-value", "totp"]).describe("Secret type"),
+    key: z.string().describe("Secret name (must be unique in org)"),
+    value: z.string().describe("Secret value (will be encrypted)"),
+    sensitive: z.boolean().describe("If true, value is redacted in logs"),
+    note: z.string().optional().describe("Optional description of the secret's purpose"),
+  },
+  async (params) => {
+    const result = await devinFetch("/v1/secrets", {
+      method: "POST",
+      body: params,
+    });
+    return {
+      content: [{
+        type: "text",
+        text: `Secret created with ID: ${result.id}`,
+      }],
+    };
+  }
+);
+
+server.tool(
+  "delete_secret",
+  "Permanently delete a secret from the organization via the REST API. This cannot be undone.",
+  {
+    secret_id: z.string().describe("The secret ID to delete"),
+  },
+  async ({ secret_id }) => {
+    const result = await devinFetch(`/v1/secrets/${secret_id}`, { method: "DELETE" });
+    return {
+      content: [{
+        type: "text",
+        text: result?.message || `Secret ${secret_id} deleted.`,
+      }],
+    };
+  }
+);
+
 // --- Start server ---
 
 const transport = new StdioServerTransport();
