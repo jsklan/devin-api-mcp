@@ -88,9 +88,13 @@ function formatSession(s) {
 
 const server = new McpServer({
   name: "devin-api",
-  version: "0.1.0",
+  version: "0.2.0",
   instructions:
-    "Use this server for managing Devin sessions (create, list, message, terminate) and playbooks via the Devin REST API. " +
+    "Use this server for managing Devin sessions (create, list, message, terminate, tag), " +
+    "knowledge (list, create, update, delete), " +
+    "playbooks (list, get, create, update, delete), " +
+    "secrets (list, create, delete), " +
+    "and attachments (upload) via the Devin REST API. " +
     "Do NOT use this server for documentation queries or asking questions about repositories — those use the separate DeepWiki 'devin' MCP server.",
 });
 
