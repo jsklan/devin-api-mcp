@@ -1,11 +1,9 @@
 {
-  "mcpServers": {
-    "devin-api": {
-      "command": "node",
-      "args": ["${CLAUDE_PLUGIN_ROOT}/dist/index.js"],
-      "env": {
-        "DEVIN_API_KEY": "${DEVIN_API_KEY}"
-      }
+  "devin-api": {
+    "command": "npx",
+    "args": ["-y", "@jsklan/devin-api-mcp"],
+    "env": {
+      "DEVIN_API_KEY": "${DEVIN_API_KEY}"
     }
   }
 }
