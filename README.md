@@ -4,6 +4,45 @@ A lightweight MCP server for interacting with the Devin API.
 
 The existing [Devin MCP](https://docs.devin.ai/work-with-devin/devin-mcp) server only supports documentation/wiki lookups and asking questions about repositories. This server instead provides **full Devin API coverage** — manage sessions, knowledge, playbooks, secrets, and attachments programmatically from any MCP client.
 
+## Setup
+
+### 1. Get your API key
+
+Follow the [Devin API authentication guide](https://docs.devin.ai/api-reference/authentication) to generate an API key.
+
+### 2. Register with Claude Code
+
+```bash
+claude mcp add -s user -e DEVIN_API_KEY=<your-api-key-here> -- devin-api npx -y @jsklan/devin-api-mcp
+```
+
+### Alternative: Install as a Claude Code plugin
+
+1. Run `/plugin` in Claude Code
+2. Go to **Marketplaces** → **+ Add Marketplace**
+3. Enter `jsklan/devin-api-mcp`
+4. Go to **Discover**, find **devin-api**, and install it
+
+Make sure `DEVIN_API_KEY` is set in your environment. The plugin will start the MCP server automatically and stay up to date.
+
+### 3. Register with other MCP clients
+
+Add to your MCP config (e.g. `mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "devin-api": {
+      "command": "npx",
+      "args": ["-y", "@jsklan/devin-api-mcp"],
+      "env": {
+        "DEVIN_API_KEY": "your_key_here"
+      }
+    }
+  }
+}
+```
+
 ## Tools
 
 ### Sessions
@@ -44,45 +83,6 @@ The existing [Devin MCP](https://docs.devin.ai/work-with-devin/devin-mcp) server
 | Tool | Description |
 |------|-------------|
 | `upload_attachment` | Upload a file for use in sessions (returns URL for `ATTACHMENT:"<url>"` format) |
-
-## Setup
-
-### 1. Get your API key
-
-Generate a Devin API key from your [Devin account settings](https://app.devin.ai/settings).
-
-### 2. Register with Claude Code
-
-```bash
-claude mcp add -s user -e DEVIN_API_KEY=<your-api-key-here> -- devin-api npx -y @jsklan/devin-api-mcp
-```
-
-### Alternative: Install as a Claude Code plugin
-
-1. Run `/plugin` in Claude Code
-2. Go to **Marketplaces** → **+ Add Marketplace**
-3. Enter `jsklan/devin-api-mcp`
-4. Go to **Discover**, find **devin-api**, and install it
-
-Make sure `DEVIN_API_KEY` is set in your environment. The plugin will start the MCP server automatically and stay up to date.
-
-### 3. Register with other MCP clients
-
-Add to your MCP config (e.g. `mcp.json`):
-
-```json
-{
-  "mcpServers": {
-    "devin-api": {
-      "command": "npx",
-      "args": ["-y", "@jsklan/devin-api-mcp"],
-      "env": {
-        "DEVIN_API_KEY": "your_key_here"
-      }
-    }
-  }
-}
-```
 
 ## API Coverage
 
