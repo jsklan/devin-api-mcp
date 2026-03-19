@@ -66,13 +66,16 @@ function formatSession(s) {
 const server = new McpServer({
   name: "devin-api",
   version: "0.1.0",
+  instructions:
+    "Use this server for managing Devin sessions (create, list, message, terminate) and playbooks via the Devin REST API. " +
+    "Do NOT use this server for documentation queries or asking questions about repositories — those use the separate DeepWiki 'devin' MCP server.",
 });
 
 // --- Session tools ---
 
 server.tool(
   "create_session",
-  "Create a new Devin session with a prompt. Returns the session ID and URL.",
+  "Create a new Devin session via the REST API. Sends a prompt to Devin and returns the session ID and URL.",
   {
     prompt: z.string().describe("The task/instructions for Devin"),
     title: z.string().optional().describe("Optional session title"),
@@ -117,7 +120,7 @@ server.tool(
 
 server.tool(
   "list_sessions",
-  "List Devin sessions. Returns recent sessions with their status, title, and metadata.",
+  "List Devin sessions via the REST API. Returns recent sessions with their status, title, and metadata.",
   {
     limit: z.number().int().optional().describe("Max sessions to return (default: 20)"),
     offset: z.number().int().optional().describe("Pagination offset"),
@@ -161,7 +164,7 @@ server.tool(
 
 server.tool(
   "get_session",
-  "Get details of a specific Devin session including its messages and status.",
+  "Get details of a specific Devin session via the REST API, including its messages and status.",
   {
     session_id: z.string().describe("The session ID (e.g. devin-abc123...)"),
   },
@@ -190,7 +193,7 @@ server.tool(
 
 server.tool(
   "send_message",
-  "Send a follow-up message to a running Devin session.",
+  "Send a follow-up message to a running Devin session via the REST API.",
   {
     session_id: z.string().describe("The session ID to message"),
     message: z.string().describe("The message to send to Devin"),
@@ -208,7 +211,7 @@ server.tool(
 
 server.tool(
   "terminate_session",
-  "Terminate/stop a running Devin session.",
+  "Terminate/stop a running Devin session via the REST API.",
   {
     session_id: z.string().describe("The session ID to terminate"),
   },
@@ -229,7 +232,7 @@ server.tool(
 
 server.tool(
   "list_playbooks",
-  "List available Devin playbooks (titles and IDs only). Use get_playbook to see full details.",
+  "List available Devin playbooks via the REST API (titles and IDs only). Use get_playbook to see full details.",
   {},
   async () => {
     const playbooks = await devinFetch("/v1/playbooks");
@@ -245,7 +248,7 @@ server.tool(
 
 server.tool(
   "get_playbook",
-  "Get full details of a specific Devin playbook by ID.",
+  "Get full details of a specific Devin playbook via the REST API.",
   {
     playbook_id: z.string().describe("The playbook ID (e.g. playbook-abc123...)"),
   },
