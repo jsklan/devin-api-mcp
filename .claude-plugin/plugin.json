@@ -1,11 +1,17 @@
 {
   "name": "devin-api",
-  "version": "0.2.5",
+  "version": "0.2.8",
   "description": "MCP server for the Devin API — create, manage, and interact with Devin sessions, knowledge, playbooks, secrets, and attachments",
   "author": {
     "name": "jsklan"
   },
   "repository": "https://github.com/jsklan/devin-api-mcp",
   "license": "MIT",
-  "keywords": ["devin", "api", "sessions", "knowledge", "playbooks"]
+  "keywords": [
+    "devin",
+    "api",
+    "sessions",
+    "knowledge",
+    "playbooks"
+  ]
 }
