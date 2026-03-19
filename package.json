@@ -15,6 +15,8 @@
     "build": "tsc",
     "start:v1": "node dist/v1.js",
     "start:v3": "node dist/v3.js",
+    "check": "biome check src/",
+    "check:fix": "biome check --write src/",
     "prepublishOnly": "tsc",
     "version": "node -e \"const v=require('./package.json').version; for(const f of ['.claude-plugin/plugin.json','.claude-plugin/marketplace.json']){const j=require('./'+f);j.version?j.version=v:j.metadata&&(j.metadata.version=v);require('fs').writeFileSync(f,JSON.stringify(j,null,2)+'\\n')}\" && git add .claude-plugin/plugin.json .claude-plugin/marketplace.json"
   },
@@ -28,6 +30,7 @@
   },
   "license": "MIT",
   "devDependencies": {
+    "@biomejs/biome": "^2.4.8",
     "@types/node": "^25.5.0",
     "typescript": "^5.9.3"
   }
