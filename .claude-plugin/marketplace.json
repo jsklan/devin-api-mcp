@@ -1,5 +1,5 @@
 {
-  "name": "devin-api-mcp",
+  "name": "devin-api",
   "owner": {
     "name": "jsklan"
   },
@@ -9,7 +9,7 @@
   },
   "plugins": [
     {
-      "name": "devin-api-mcp",
+      "name": "devin-api",
       "source": "./",
       "description": "Full Devin API coverage — manage sessions, knowledge, playbooks, secrets, and attachments from Claude Code",
       "category": "integrations",

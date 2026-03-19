@@ -62,7 +62,7 @@ claude mcp add -s user -e DEVIN_API_KEY=<your-api-key-here> -- devin-api npx -y 
 1. Run `/plugin` in Claude Code
 2. Go to **Marketplaces** → **+ Add Marketplace**
 3. Enter `jsklan/devin-api-mcp`
-4. Go to **Discover**, find **devin-api-mcp**, and install it
+4. Go to **Discover**, find **devin-api**, and install it
 
 Make sure `DEVIN_API_KEY` is set in your environment. The plugin will start the MCP server automatically and stay up to date.
 

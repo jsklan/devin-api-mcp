@@ -1,5 +1,5 @@
 {
-  "name": "devin-api-mcp",
+  "name": "devin-api",
   "version": "0.2.5",
   "description": "MCP server for the Devin API — create, manage, and interact with Devin sessions, knowledge, playbooks, secrets, and attachments",
   "author": {
