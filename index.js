@@ -89,6 +89,14 @@ server.tool(
       .positive()
       .optional()
       .describe("Optional max ACU (compute) limit"),
+    idempotent: z.boolean().optional().describe("If true, reuse an existing session with the same prompt instead of creating a new one"),
+    knowledge_ids: z.array(z.string()).optional().describe("List of knowledge IDs to use. If omitted, uses all knowledge. Pass empty array to use none"),
+    secret_ids: z.array(z.string()).optional().describe("List of secret IDs to use. If omitted, uses all secrets. Pass empty array to use none"),
+    session_secrets: z.array(z.object({
+      key: z.string().describe("Secret key name"),
+      value: z.string().describe("Secret value"),
+    })).optional().describe("Temporary session-specific secrets (not persisted to org)"),
+    structured_output_schema: z.record(z.unknown()).optional().describe("JSON Schema (Draft 7) for structured output validation. Max 64KB"),
   },
   async (params) => {
     const body = { prompt: params.prompt };
@@ -98,6 +106,11 @@ server.tool(
     if (params.tags) body.tags = params.tags;
     if (params.unlisted) body.unlisted = params.unlisted;
     if (params.max_acu_limit) body.max_acu_limit = params.max_acu_limit;
+    if (params.idempotent !== undefined) body.idempotent = params.idempotent;
+    if (params.knowledge_ids) body.knowledge_ids = params.knowledge_ids;
+    if (params.secret_ids) body.secret_ids = params.secret_ids;
+    if (params.session_secrets) body.session_secrets = params.session_secrets;
+    if (params.structured_output_schema) body.structured_output_schema = params.structured_output_schema;
 
     const result = await devinFetch("/v1/sessions", { method: "POST", body });
     return {
