@@ -396,6 +396,68 @@ server.tool(
   }
 );
 
+server.tool(
+  "create_playbook",
+  "Create a new team playbook via the REST API.",
+  {
+    title: z.string().min(1).describe("Playbook title"),
+    body: z.string().min(1).describe("Playbook content/instructions"),
+    macro: z.string().optional().describe("Optional macro identifier"),
+  },
+  async (params) => {
+    const result = await devinFetch("/v1/playbooks", {
+      method: "POST",
+      body: params,
+    });
+    return {
+      content: [{
+        type: "text",
+        text: `Playbook created: ${result.title} (${result.playbook_id})`,
+      }],
+    };
+  }
+);
+
+server.tool(
+  "update_playbook",
+  "Update an existing team playbook via the REST API.",
+  {
+    playbook_id: z.string().describe("The playbook ID to update"),
+    title: z.string().min(1).describe("Updated title"),
+    body: z.string().min(1).describe("Updated content/instructions"),
+    macro: z.string().nullable().optional().describe("Updated macro (null to clear)"),
+  },
+  async ({ playbook_id, ...fields }) => {
+    const result = await devinFetch(`/v1/playbooks/${playbook_id}`, {
+      method: "PUT",
+      body: fields,
+    });
+    return {
+      content: [{
+        type: "text",
+        text: result?.status || `Playbook ${playbook_id} updated.`,
+      }],
+    };
+  }
+);
+
+server.tool(
+  "delete_playbook",
+  "Delete a team playbook via the REST API. Requires ManageOrgPlaybooks permission.",
+  {
+    playbook_id: z.string().describe("The playbook ID to delete"),
+  },
+  async ({ playbook_id }) => {
+    const result = await devinFetch(`/v1/playbooks/${playbook_id}`, { method: "DELETE" });
+    return {
+      content: [{
+        type: "text",
+        text: result?.status || `Playbook ${playbook_id} deleted.`,
+      }],
+    };
+  }
+);
+
 // --- Start server ---
 
 const transport = new StdioServerTransport();
