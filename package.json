@@ -1,6 +1,6 @@
 {
   "name": "@jsklan/devin-api-mcp",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "MCP server for the Devin API — create, manage, and interact with Devin sessions",
   "main": "dist/v1.js",
   "type": "module",
