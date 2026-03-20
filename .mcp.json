@@ -1,9 +1,19 @@
 {
-  "devin-api": {
-    "command": "npx",
-    "args": ["-y", "@jsklan/devin-api-mcp"],
-    "env": {
-      "DEVIN_API_KEY": "${DEVIN_API_KEY}"
+  "mcpServers": {
+    "devin-api-v1": {
+      "command": "npx",
+      "args": ["-y", "-p", "@jsklan/devin-api-mcp", "devin-api-v1"],
+      "env": {
+        "DEVIN_PERSONAL_API_KEY": "${DEVIN_PERSONAL_API_KEY}",
+        "DEVIN_API_KEY": "${DEVIN_API_KEY}"
+      }
+    },
+    "devin-api-v3": {
+      "command": "npx",
+      "args": ["-y", "-p", "@jsklan/devin-api-mcp", "devin-api-v3"],
+      "env": {
+        "DEVIN_SERVICE_API_KEY": "${DEVIN_SERVICE_API_KEY}"
+      }
     }
   }
 }
