@@ -1,6 +1,6 @@
 {
   "name": "devin-api",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "MCP servers for the Devin API — v1 (legacy) and v3 (organization) endpoints",
   "author": {
     "name": "jsklan"
