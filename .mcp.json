@@ -4,8 +4,7 @@
       "command": "npx",
       "args": ["-y", "-p", "@jsklan/devin-api-mcp", "devin-api-v1"],
       "env": {
-        "DEVIN_PERSONAL_API_KEY": "${DEVIN_PERSONAL_API_KEY}",
-        "DEVIN_API_KEY": "${DEVIN_API_KEY}"
+        "DEVIN_PERSONAL_API_KEY": "${DEVIN_PERSONAL_API_KEY}"
       }
     },
     "devin-api-v3": {
